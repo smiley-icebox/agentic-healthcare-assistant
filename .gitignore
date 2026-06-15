@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+healthcare.db
+healthcare.db-wal
+healthcare.db-shm
+logs/
+*.zip
+.DS_Store
+.pytest_cache/
+screenshots/

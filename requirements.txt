@@ -1,0 +1,26 @@
+# Agentic Healthcare Assistant — pinned runtime + dev dependencies.
+# Python 3.14. Install: python -m venv .venv && pip install -r requirements.txt
+# The app runs fully offline (USE_LLM=0); the LLM/live-search/eval-grader paths need
+# an ANTHROPIC_API_KEY (see .env.example).
+
+# --- Agent graph + LLM -------------------------------------------------------
+langgraph==1.2.5
+langchain==1.3.9
+langchain-core==1.4.7
+langchain-anthropic==1.4.6
+langchain-classic==1.0.8       # provides QAEvalChain (langchain 1.x moved legacy eval here)
+anthropic==0.109.1
+
+# --- Retrieval (RAG) ---------------------------------------------------------
+faiss-cpu==1.14.3              # vector index over the curated corpus (no torch)
+scikit-learn==1.9.0           # TF-IDF vectors for the index
+numpy==2.4.6
+
+# --- App + I/O ---------------------------------------------------------------
+streamlit==1.58.0
+python-dotenv==1.2.2
+pydantic==2.13.4
+requests==2.34.2              # best-effort live MedlinePlus fetch
+
+# --- Tests -------------------------------------------------------------------
+pytest==9.1.0

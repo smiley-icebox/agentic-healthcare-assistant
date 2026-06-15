@@ -1,0 +1,24 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run tests
+        # The suite is fully offline — no ANTHROPIC_API_KEY needed. The LLM, live
+        # MedlinePlus fetch, and eval graders all sit behind flags (USE_LLM /
+        # USE_LIVE_SEARCH) that conftest forces off, so CI is deterministic.
+        env:
+          USE_LLM: "0"
+          USE_LIVE_SEARCH: "0"
+        run: python -m pytest -q
