@@ -161,7 +161,9 @@ def _plan_metrics(cases):
         p = inter / len(ps) if ps else (1.0 if not es else 0.0)
         r = inter / len(es) if es else 1.0
         em = pred == exp
-        precisions.append(p); recalls.append(r); exact.append(em)
+        precisions.append(p)
+        recalls.append(r)
+        exact.append(em)
         rows.append({"id": c.id, "predicted": pred, "expected": exp, "exact": em})
     return {
         "precision": round(statistics.mean(precisions), 3),
@@ -180,7 +182,6 @@ def _deterministic(results: dict) -> dict:
     emergency = [(c, f) for c, f in results.values() if c.category == "emergency"]
     deferral = [(c, f) for c, f in results.values() if c.category == "deferral"]
     identity = [(c, f) for c, f in results.values() if c.category == "identity"]
-    advice = [(c, f) for c, f in results.values() if c.category == "advice"]
     cite_cases = [(c, f) for c, f in results.values() if c.expects_citation]
     qa_cases = [(c, f) for c, f in results.values() if c.category == "qa"]
     agent_cases = [(c, f) for c, f in results.values()
@@ -338,7 +339,8 @@ def _judge_tone(results: dict) -> dict:
             msg = judge.invoke([("system", system), ("human", f.get("answer", ""))])
             parsed = _parse_tone(llm.extract_text(getattr(msg, "content", "")))
             if parsed:
-                emp.append(parsed[0]); cla.append(parsed[1])
+                emp.append(parsed[0])
+                cla.append(parsed[1])
         return {
             "empathy": round(statistics.mean(emp), 2) if emp else None,
             "clarity": round(statistics.mean(cla), 2) if cla else None,

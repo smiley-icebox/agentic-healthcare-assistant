@@ -35,6 +35,16 @@ _ADVICE_PATTERNS = [
     r"\b(stopping|starting|increasing|decreasing|discontinuing|halting) (the|your)\b",
     r"\bthe (best|recommended|appropriate|right) (step|course|option|thing) (is|would be) to\b",
     r"\b(should|must|need to) be (started|stopped|increased|decreased|discontinued)\b",
+    # Imperative LIFESTYLE directives aimed at the patient — common in raw source prose
+    # ("Don't smoke. Lose weight. Control your blood pressure."). Informational third-
+    # person phrasing ("managed with a low-salt diet", "smoking cessation helps") has no
+    # second-person/imperative directive and is NOT caught. This is what keeps advisory
+    # LIVE source content out — it's rejected at retrieval in favor of the curated corpus.
+    r"\b(don'?t|do not|never|always) (smoke|drink|eat|use|skip|stop|take|wait|delay)\b",
+    r"\blose weight\b", r"\bbe (physically )?active\b", r"\bquit smoking\b",
+    r"\b(control|keep|limit|monitor|check|maintain|lower|raise|reduce|increase|watch|track|manage) your\b",
+    r"\bchoose (foods|healthy|whole|low-fat|fruits)\b", r"\blimit the amount\b",
+    r"\byou (drink|smoke|eat)\b",
 ]
 _ADVICE_RE = re.compile("|".join(_ADVICE_PATTERNS), re.IGNORECASE)
 

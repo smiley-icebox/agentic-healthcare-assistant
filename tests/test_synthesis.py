@@ -9,7 +9,6 @@ import auth
 import config
 import graph
 import llm
-from seed_data import DEMO_PATIENT_ID
 
 
 class _FakeMsg:

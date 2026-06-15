@@ -4,7 +4,7 @@ scenario, identity-from-session, scope, and deferral."""
 import auth
 import config
 import graph
-from seed_data import DEMO_PATIENT_ID, OTHER_PATIENT_ID
+from seed_data import DEMO_PATIENT_ID
 
 
 def raj(): return auth.authenticate("raj", "demo123")

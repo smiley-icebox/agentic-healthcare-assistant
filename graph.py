@@ -227,7 +227,8 @@ def _synthesize(state: State) -> dict:
     seen, uniq = set(), []
     for c in cites:
         if c.get("url") and c["url"] not in seen:
-            seen.add(c["url"]); uniq.append(c)
+            seen.add(c["url"])
+            uniq.append(c)
     # Persist redacted patient summaries to the vector store: the chart summary when one
     # was retrieved (so future turns can semantically recall it) plus a short note of the
     # request handled. Both are redacted in save_memory before storage.

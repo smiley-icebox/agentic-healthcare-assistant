@@ -14,6 +14,8 @@ jobs:
           python-version: "3.12"
       - name: Install dependencies
         run: pip install -r requirements.txt
+      - name: Lint
+        run: ruff check .
       - name: Run tests
         # The suite is fully offline — no ANTHROPIC_API_KEY needed. The LLM, live
         # MedlinePlus fetch, and eval graders all sit behind flags (USE_LLM /

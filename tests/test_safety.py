@@ -36,6 +36,11 @@ def test_advice_validator_flags_personalized_advice():
         # Passive / impersonal advice — the same act, depersonalized.
         "It is recommended that you stop taking your medication.",
         "It is best to discontinue lisinopril.",
+        # Imperative lifestyle directives (common in raw source prose, must not ship).
+        "Don't smoke.",
+        "Lose weight if you are overweight.",
+        "Control your blood pressure and keep your blood sugar in range.",
+        "Be physically active and choose foods with less salt.",
     ]:
         assert safety.contains_advice(msg), msg
 

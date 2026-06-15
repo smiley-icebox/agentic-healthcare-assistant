@@ -22,7 +22,6 @@ from datetime import datetime, timezone
 
 import config
 import migrations
-from config import APPOINTMENT_STATUSES
 
 
 def _now() -> str:

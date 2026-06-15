@@ -13,6 +13,11 @@ a system you'd actually run.
 > synthetic data. It gives *information*, never advice or diagnosis, and escalates
 > emergencies to 911/988. See [SECURITY.md](SECURITY.md).
 
+![The chat-first assistant: a multi-step request decomposed into a plan, executed, and
+answered — with the inline "How I worked this out" inspector showing the goal
+decomposition, per-tool status, and the safety telemetry (here it transparently rejected
+its own LLM phrasing and shipped the grounded deterministic answer).](docs/demo-chat.png)
+
 ## The one idea worth taking away
 
 This is a genuine **agent** (the request needs multi-step coordination the caller can't
