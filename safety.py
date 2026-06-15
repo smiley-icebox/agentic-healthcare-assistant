@@ -31,7 +31,7 @@ _ADVICE_PATTERNS = [
     r"\byou (likely|probably|may|might|could|seem to|appear to) have\b.*\b(disease|cancer|condition|diabetes)\b",
     r"\byou don'?t need\b", r"\bno need to see\b",
     # Passive / impersonal advice — the same act, just depersonalized.
-    r"\bit'?s? (recommended|advisable|advised|best|important) (that you |to )\b",
+    r"\bit('?s| is)? (recommended|advisable|advised|best|important) (that you |to )\b",
     r"\b(stopping|starting|increasing|decreasing|discontinuing|halting) (the|your)\b",
     r"\bthe (best|recommended|appropriate|right) (step|course|option|thing) (is|would be) to\b",
     r"\b(should|must|need to) be (started|stopped|increased|decreased|discontinued)\b",

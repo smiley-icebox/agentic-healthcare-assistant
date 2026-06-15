@@ -176,11 +176,20 @@ def _tokens(text):
     return {t for t in _WORD_RE.findall((text or "").lower()) if len(t) >= 4}
 
 
-def is_grounded(sentence: str, passages: list) -> bool:
-    """Deterministic claim-grounding check: a sentence is grounded if most of its
-    substantive tokens appear in the retrieved passages (token-overlap, threshold 0.4).
-    This is the grounding control — a lightweight, offline, non-LLM filter; the graph
-    applies it to every substantive sentence before shipping LLM-phrased text."""
+# Calibrated from real output: a FAITHFUL paraphrase of the corpus scores ~0.27-0.6
+# substantive-token overlap (connective words like "despite this" dilute it), while an
+# off-topic FABRICATION scores ~0.0. 0.25 sits between the two — it admits honest
+# paraphrase and rejects fabrication. Tuned low on purpose: a false reject only costs
+# fluency (we fall back to the grounded deterministic answer), so the safe error is to
+# under-ship LLM text, not to ship an ungrounded claim. (Token overlap can't catch a
+# contradiction that reuses on-topic words — that needs entailment; see SECURITY.md.)
+GROUNDING_MIN_OVERLAP = 0.25
+
+
+def is_grounded(sentence: str, passages: list, min_overlap: float = GROUNDING_MIN_OVERLAP) -> bool:
+    """Deterministic claim-grounding check: a sentence is grounded if enough of its
+    substantive tokens appear in the retrieved passages. A lightweight, offline, non-LLM
+    filter; the graph applies it to every sentence before shipping LLM-phrased text."""
     s = _tokens(sentence)
     if not s:
         return True
@@ -188,4 +197,4 @@ def is_grounded(sentence: str, passages: list) -> bool:
     for p in passages:
         corpus_tokens |= _tokens(p.get("content", ""))
     overlap = len(s & corpus_tokens) / len(s)
-    return overlap >= 0.4
+    return overlap >= min_overlap

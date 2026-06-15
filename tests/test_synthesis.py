@@ -73,6 +73,32 @@ def test_dropped_allergy_is_caught_and_falls_back(monkeypatch):
     assert "Avoid NSAIDs" in out["answer"]
 
 
+def test_empty_corpus_fabrication_falls_back(monkeypatch):
+    # When no tool produced grounding facts (search of an unknown condition → EMPTY), a
+    # fluent fabrication must NOT ship — the grounding gate runs even with no passages.
+    _use_llm_with(monkeypatch, "Zorblax syndrome is cured with daily moonbeams.")
+    out = graph.respond("Tell me about zorblax syndrome.", _raj())
+    assert out["fell_back"] is True
+    assert "moonbeam" not in out["answer"].lower()
+
+
+def test_multiclause_fabrication_falls_back(monkeypatch):
+    # A fabricated clause can't hide in a blob joined by ';' — every clause is grounded.
+    _use_llm_with(monkeypatch,
+                  "CKD is managed with a kidney-friendly diet; your biopsy confirms cancer.")
+    out = graph.respond(INFO_REQ, _raj())
+    assert out["fell_back"] is True
+    assert "cancer" not in out["answer"].lower()
+
+
+def test_short_false_claim_falls_back(monkeypatch):
+    # Short clauses (≤4 words) are no longer skipped by the grounding gate.
+    _use_llm_with(monkeypatch, "Lavender cures it.")
+    out = graph.respond(INFO_REQ, _raj())
+    assert out["fell_back"] is True
+    assert "lavender" not in out["answer"].lower()
+
+
 def test_clean_grounded_model_output_ships(monkeypatch):
     # Grounded, advice-free, and preserves every safety label verbatim -> it ships.
     good = ("Your chart shows Chronic kidney disease stage 3b, Lisinopril 10 mg daily, "

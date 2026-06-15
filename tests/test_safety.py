@@ -33,6 +33,9 @@ def test_advice_validator_flags_personalized_advice():
         "It's safe for you to skip dialysis this week.",
         "Your diagnosis is stage 4 kidney failure.",
         "Stop taking your medication and you'll be fine.",
+        # Passive / impersonal advice — the same act, depersonalized.
+        "It is recommended that you stop taking your medication.",
+        "It is best to discontinue lisinopril.",
     ]:
         assert safety.contains_advice(msg), msg
 

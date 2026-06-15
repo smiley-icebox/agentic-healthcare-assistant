@@ -40,6 +40,7 @@ class _User:
     assigned_patients: tuple         # charts a staff member may access
     salt: bytes
     pw_hash: str
+    doctor_id: str | None = None     # the directory doctor a clinician maps to
 
 
 @dataclass(frozen=True)
@@ -54,6 +55,7 @@ class Session:
     username: str
     patient_id: str | None = None       # patient's own chart id (None for staff)
     assigned_patients: tuple = ()        # charts a staff member may access
+    doctor_id: str | None = None         # directory doctor a clinician maps to (their calendar)
     issued_at: str = ""
 
     @property
@@ -73,10 +75,10 @@ def can_access(session: Session, patient_id: str) -> bool:
     return False
 
 
-def _seed(username, password, user_id, name, role, patient_id=None, assigned=()):
+def _seed(username, password, user_id, name, role, patient_id=None, assigned=(), doctor_id=None):
     salt = os.urandom(16)
     return username, _User(user_id, name, role, patient_id, tuple(assigned), salt,
-                           _hash_password(password, salt))
+                           _hash_password(password, salt), doctor_id)
 
 
 # Demo directory (passwords documented in README). Patients see only their own chart;
@@ -88,7 +90,7 @@ _USERS: dict[str, _User] = dict(
         _seed("alex", "demo123", "U_alex", "Alex (Front Desk)", ROLE_ATTENDANT,
               assigned=("P1001", "P1002")),
         _seed("drlee", "demo123", "U_drlee", "Dr. Lee", ROLE_CLINICIAN,
-              assigned=("P1001", "P1002")),
+              assigned=("P1001", "P1002"), doctor_id="D_gp"),
     ]
 )
 
@@ -105,7 +107,7 @@ def authenticate(username: str, password: str) -> Session | None:
     return Session(
         user_id=user.user_id, name=user.name, role=user.role,
         username=username.strip().lower(), patient_id=user.patient_id,
-        assigned_patients=user.assigned_patients,
+        assigned_patients=user.assigned_patients, doctor_id=user.doctor_id,
         issued_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
     )
 

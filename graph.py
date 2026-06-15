@@ -16,6 +16,7 @@ papered over with model memory — the synthesizer surfaces it. patient_id is re
 from the trusted session in `guard`, never taken from the plan or message.
 """
 
+import re
 import time
 from typing import Callable, Optional
 
@@ -181,11 +182,17 @@ def _llm_answer(query, results, mem) -> tuple[str, list, bool]:
         return det, cites, True
     if safety.contains_advice(text):
         return det, cites, True
-    # Grounding gate: every substantive sentence supported by the corpus (now incl. history).
-    if passages:
-        for sent in [s for s in text.replace("\n", " ").split(". ") if len(s.split()) > 4]:
-            if not knowledge.is_grounded(sent, passages):
-                return det, cites, True
+    # Grounding gate: EVERY sentence must be supported by the corpus (medical passages +
+    # structured chart + tool summaries). Three holes the review found, all closed here:
+    #  - no `if passages:` guard — an empty corpus means nothing is grounded, so a
+    #    fabrication can't ship with grounded=True (is_grounded returns False vs []);
+    #  - split on real sentence/clause boundaries (. ! ? ; :  and newlines), not just
+    #    ". ", so a fabricated clause can't hide in a multi-clause blob;
+    #  - no word-count filter — is_grounded already passes token-empty fragments, so
+    #    short false claims ("Lavender cures it.") are checked, benign closers are not.
+    for sent in re.split(r"(?<=[.!?;:])\s+|\n+", text):
+        if not knowledge.is_grounded(sent, passages):
+            return det, cites, True
     # Verbatim-safety gate: a softened/dropped allergy or alert is direct harm. The
     # allergen/alert label must be present (case-insensitive — "penicillin" is fine, a
     # dropped or paraphrased-away "Penicillin" is not).
@@ -201,8 +208,11 @@ def _llm_answer(query, results, mem) -> tuple[str, list, bool]:
 def _synthesize(state: State) -> dict:
     results = state.get("step_results", [])
     query = state["message"]
+    subject = state["subject_id"]
     if config.USE_LLM:
-        answer, cites, fell_back = _llm_answer(query, results, memory.load_memory(state["subject_id"]))
+        # FAISS-backed semantic recall of this patient's prior summaries (most relevant
+        # to the current request), injected into the prompt as patient context.
+        answer, cites, fell_back = _llm_answer(query, results, memory.search_memory(subject, query))
     else:
         answer, cites, fell_back = *_deterministic_answer(query, results), False
     # Universal no-advice floor: the validator runs on the FINAL answer regardless of
@@ -218,9 +228,13 @@ def _synthesize(state: State) -> dict:
     for c in cites:
         if c.get("url") and c["url"] not in seen:
             seen.add(c["url"]); uniq.append(c)
-    # persist a short, redacted memory note
-    memory.save_memory(state["subject_id"],
-                       f"Request handled via {[r['tool'] for r in results]}")
+    # Persist redacted patient summaries to the vector store: the chart summary when one
+    # was retrieved (so future turns can semantically recall it) plus a short note of the
+    # request handled. Both are redacted in save_memory before storage.
+    for r in results:
+        if r["tool"] == "retrieve_history" and r["status"] == "ok" and r.get("summary"):
+            memory.save_memory(subject, "Chart summary — " + r["summary"])
+    memory.save_memory(subject, f"Request: {query}")
     return {"answer": answer, "citations": uniq, "grounded": grounded,
             "fell_back": fell_back, "advice_blocked": advice_blocked}
 

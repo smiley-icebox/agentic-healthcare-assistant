@@ -47,10 +47,14 @@ def seed() -> None:
         db.add_patient(pid, name, dob)
     for did, name, spec in DOCTORS:
         db.add_doctor(did, name, spec)
+    slot_ids = {}
     for did, start in SLOTS:
-        db.add_slot(did, start)
+        slot_ids[(did, start)] = db.add_slot(did, start)
     for pid, rtype, label, value, note, by in RECORDS:
         db.add_record(pid, rtype, label, value, note, recorded_by=by)
+    # One pre-booked appointment so the doctor view (Dr. Lee = D_gp) isn't empty on day one.
+    db.book_slot(slot_ids[("D_gp", "2026-06-21T08:30:00+00:00")], OTHER_PATIENT_ID,
+                 "General Practice", actor="attendant:alex")
 
 
 if __name__ == "__main__":

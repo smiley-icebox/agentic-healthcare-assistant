@@ -55,6 +55,10 @@ message. **Failed load-bearing steps are surfaced, not papered over** with model
 The **no-advice validator** runs on the final answer regardless of path, so it can't be
 bypassed by the deterministic fallback.
 
+**Two FAISS vector stores.** A shared index over the curated *disease corpus* (RAG, below)
+and a *per-patient* index over that patient's stored summaries (`memory.search_memory`),
+so the prompt gets the most relevant prior context, scoped to the can_access'd patient.
+
 ## RAG (trusted medical info)
 
 `search_medical_info` is **offline-first and citation-pinned**:
@@ -109,7 +113,10 @@ Append-only where it matters, audited in the same transaction as the change
   typed so the LLM never parses them back out of prose.
 - **`audit_events`** — an immutable row per write (`book`, `add_record`), with actor +
   detail, written in the *same transaction* so history can't drift from data.
-- **`patient_memory`** — per-patient long-term notes (scoped + PHI-redacted before store).
+- **`patient_memory`** — per-patient long-term summaries (scoped + PHI-redacted before
+  store), retrieved **semantically via a per-patient FAISS index** (`memory.search_memory`)
+  so the most *relevant* prior context — not just the most recent — is injected into the
+  prompt.
 
 ## Run it
 
@@ -123,11 +130,18 @@ cp .env.example .env        # then put your real key in it: ANTHROPIC_API_KEY=sk
 .venv/bin/streamlit run app.py    # launch the dashboard
 ```
 
-Sign in (all password `demo123`): **raj** / **maria** (patients — raj is the 50yo CKD
-patient from the brief), **alex** (attendant), **drlee** (clinician). Staff are
-assigned an explicit patient list. Use the sidebar scenario buttons: the CKD multi-step
-plan, an emergency short-circuit, the identity trap (name another chart — it acts on
-*yours*), a medical-info lookup, and an out-of-scope deferral.
+The UI is **chat-first**: one-click sign-in, a conversation, and an inline
+"🔍 How I worked this out" panel under each reply (the goal-decomposition plan, tool
+statuses, grounding). Sign in (all password `demo123`) as **Raj** / **Maria** (patients —
+Raj is the 50yo CKD patient from the brief), **Alex** (attendant), or **Dr. Lee**
+(clinician — sees a doctor's-calendar view). The sidebar shows the patient's
+appointments, chart (allergies/alerts flagged), long-term memory, and an "Under the
+hood" section (eval scorecard + staff-only decision log).
+
+Use the inline **"Try one"** chips to fire scenarios — for a patient: the CKD
+multi-step plan, a history summary, a condition lookup, and an emergency short-circuit.
+Type to trigger others: name another patient's id (the agent acts on *your* chart — the
+identity guard) or ask something out of scope (it defers).
 
 **No Anthropic key?** Set `USE_LLM=0` in `.env` and the whole app still runs — the
 planner uses a keyword heuristic and answers are deterministic (grounded by
@@ -136,7 +150,7 @@ construction). Live search and the eval graders are likewise behind flags.
 ## Verify
 
 ```bash
-.venv/bin/python -m pytest          # 37 tests, no API key needed (fully offline)
+.venv/bin/python -m pytest          # 44 tests, no API key needed (fully offline)
 .venv/bin/python evaluation.py      # deterministic gates only (offline)
 USE_LLM=1 .venv/bin/python evaluation.py   # + QAEvalChain correctness & tone judge
 ```

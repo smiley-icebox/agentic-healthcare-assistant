@@ -40,6 +40,15 @@ def test_book_resolves_fuzzy_specialty_from_llm_plan():
         assert out["data"]["specialty"] == "Nephrology"
 
 
+def test_clinician_maps_to_doctor_and_sees_their_calendar():
+    # The doctor view: a clinician is tied to a directory doctor and can read that
+    # doctor's own schedule (the seeded GP appointment is on Dr. Lee's calendar).
+    sess = auth.authenticate("drlee", "demo123")
+    assert sess.doctor_id == "D_gp"
+    calendar = db.list_appointments(doctor_id="D_gp")
+    assert calendar and calendar[0]["patient_id"] == OTHER_PATIENT_ID
+
+
 def test_no_double_booking_under_concurrency():
     # Two threads race to claim the SAME slot. Exactly one may win.
     slot_id = db.find_available_slots("Nephrology")[0]["slot_id"]

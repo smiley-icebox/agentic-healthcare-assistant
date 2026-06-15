@@ -234,15 +234,21 @@ def _deterministic(results: dict) -> dict:
 
 
 def _answer_grounded(final: dict) -> bool:
+    # Mirror the graph's grounding gate exactly (incl. tool summaries + structured chart),
+    # with the same boundaries — so the metric can't be blind to a class the gate catches.
+    import re
     passages = []
     for s in final.get("step_results", []):
-        passages += s.get("data", {}).get("passages", [])
-    if not passages:
-        return False
-    answer = final.get("answer", "")
-    disclaimer = config.MEDICAL_DISCLAIMER
-    body = answer.replace(disclaimer, "")
-    for sent in [s for s in body.replace("\n", " ").split(". ") if len(s.split()) > 4]:
+        data = s.get("data", {})
+        passages += data.get("passages", [])
+        for rec in data.get("records", []):
+            txt = rec.get("label", "") + (f" {rec['value']}" if rec.get("value") else "")
+            if txt.strip():
+                passages.append({"content": txt})
+        if s.get("status") == "ok" and s.get("summary"):
+            passages.append({"content": s["summary"]})
+    body = final.get("answer", "").replace(config.MEDICAL_DISCLAIMER, "")
+    for sent in re.split(r"(?<=[.!?;:])\s+|\n+", body):
         if not knowledge.is_grounded(sent, passages):
             return False
     return True
@@ -344,16 +350,34 @@ def _judge_tone(results: dict) -> dict:
 
 # --- Top-level ---------------------------------------------------------------
 def evaluate() -> dict:
-    """Run the full eval set and return a structured report. Deterministic gates
-    always run; the LLM graders run only when config.USE_LLM is set.
+    """Run the full eval set and return a structured report. Deterministic gates always
+    run; the LLM graders run only when config.USE_LLM is set.
 
-    A versioned eval set must have REPRODUCIBLE inputs, so live retrieval is pinned OFF
-    for the run regardless of the global flag — otherwise medical answers would be graded
-    against MedlinePlus content that changes day to day. The eval measures the SYSTEM's
-    reasoning/safety over a fixed corpus; live search remains a runtime feature."""
-    saved_live = config.USE_LIVE_SEARCH
+    Self-isolating: the run uses a TEMP DB + temp trace path (seeded fresh) and restores
+    afterwards, so `python evaluation.py` never mutates the demo `healthcare.db` or its
+    decision log. Live retrieval is pinned OFF for REPRODUCIBLE inputs — otherwise medical
+    answers would be graded against MedlinePlus content that changes day to day; live
+    search remains a runtime feature. USE_LLM is left to the caller (so the CLI can run
+    the graders)."""
+    import os
+    import tempfile
+    import db
+    import observability
+    import repository
+    import seed_data
+    saved = (config.DB_PATH, config.USE_LIVE_SEARCH,
+             observability.LOG_DIR, observability.TRACE_PATH)
+    tmpdir = tempfile.gettempdir()
+    config.DB_PATH = os.path.join(tmpdir, "healthcare_eval.db")
     config.USE_LIVE_SEARCH = False
+    observability.LOG_DIR = tmpdir
+    observability.TRACE_PATH = os.path.join(tmpdir, "healthcare_eval_traces.jsonl")
+    repository.reset_repository_singleton()
     try:
+        if os.path.exists(config.DB_PATH):
+            os.remove(config.DB_PATH)
+        db.init_db()
+        seed_data.seed()
         results = {c.id: (c, _run(c)) for c in EVAL_SET}
         report = {
             "version": EVAL_VERSION,
@@ -366,7 +390,9 @@ def evaluate() -> dict:
             report["tone"] = _judge_tone(results)
         return report
     finally:
-        config.USE_LIVE_SEARCH = saved_live
+        (config.DB_PATH, config.USE_LIVE_SEARCH,
+         observability.LOG_DIR, observability.TRACE_PATH) = saved
+        repository.reset_repository_singleton()
 
 
 def _print_report(r: dict) -> None:
@@ -400,10 +426,8 @@ def _print_report(r: dict) -> None:
 
 
 def main() -> None:
-    import db
-    import seed_data
-    db.init_db()
-    seed_data.seed()
+    # evaluate() seeds + runs in an isolated temp DB and restores, so this never touches
+    # the demo healthcare.db. Run `USE_LLM=1 python evaluation.py` for the LLM graders.
     _print_report(evaluate())
 
 
